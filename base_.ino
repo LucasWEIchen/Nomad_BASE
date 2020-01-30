@@ -32,7 +32,7 @@ void setup()
 //  nh.subscribe(motor_power_sub);
   nh.subscribe(reset_sub);
 
-  nh.advertise(sensor_state_pub);  
+  nh.advertise(sensor_state_pub);
   nh.advertise(version_info_pub);
   nh.advertise(imu_pub);
   nh.advertise(odom_pub);
@@ -77,7 +77,7 @@ void setup()
 /*******************************************************************************
 * servo
 *******************************************************************************/
- 
+
   CMD_PORT.begin(38400);
   DXL_PORT.begin(DXL_BAUD);
 
@@ -109,16 +109,16 @@ void loop()
   update_dxl();
   update_led();
 
-  
+
   if ((t-tTime[0]) >= (1000 / CONTROL_MOTOR_SPEED_FREQUENCY))
   {
     updateGoalVelocity();
-    
-    if ((t-tTime[6]) > CONTROL_MOTOR_TIMEOUT) 
+
+    if ((t-tTime[6]) > CONTROL_MOTOR_TIMEOUT)
     {
 //      l298_motor_driver();/
 //      stop();/
-    } 
+    }
     else {
       l298_motor_driver();
     }
@@ -127,7 +127,7 @@ void loop()
 
   if ((t-tTime[1]) >= (1000 / ENCODER_SAMPLE_FREQUENCY))
   {
-    encoderread();
+    updateEncoder();
     tTime[1] = t;
   }
 
@@ -224,7 +224,7 @@ void l298_motor_driver()
   analogWrite(L_PWM, lPwm);
   analogWrite(R_PWM, rPwm);
 }
-  
+
 float mapPwm(float x, float out_min, float out_max)
 {
   return x * (out_max - out_min) + out_min;
@@ -267,7 +267,7 @@ void resetCallback(const std_msgs::Empty& reset_msg)
   initOdom();
 
   sprintf(log_msg, "Reset Odometry");
-  nh.loginfo(log_msg);  
+  nh.loginfo(log_msg);
 }
 
 /*******************************************************************************
@@ -306,7 +306,7 @@ void publishSensorStateMsg(void)
   sensor_state_msg.header.stamp = rosNow();
   sensor_state_msg.battery = sensors.checkVoltage();
 
-//  dxl_comm_/result = motor_driver.readEncoder(sensor_state_msg.left_encoder, sensor_state_msg.right_encoder);
+  dxl_comm_result = readEncoder(sensor_state_msg.left_encoder, sensor_state_msg.right_encoder);
 
   if (dxl_comm_result == true)
     updateMotorInfo(sensor_state_msg.left_encoder, sensor_state_msg.right_encoder);
@@ -321,7 +321,7 @@ void publishSensorStateMsg(void)
   // sensor_state_msg.sonar = sensors.getSonarData();
 
   sensor_state_msg.illumination = sensors.getIlluminationData();
-  
+
   sensor_state_msg.button = sensors.checkPushButton();
 
 //  sensor_state_msg.torque = mot/or_driver.getTorque();
@@ -354,7 +354,7 @@ void publishBatteryStateMsg(void)
   if (battery_state == 0)
     battery_state_msg.present = false;
   else
-    battery_state_msg.present = true;  
+    battery_state_msg.present = true;
 
   battery_state_pub.publish(&battery_state_msg);
 }
@@ -406,7 +406,7 @@ void updateTFPrefix(bool isConnected)
       if (!strcmp(get_tf_prefix, ""))
       {
         sprintf(odom_header_frame_id, "odom");
-        sprintf(odom_child_frame_id, "base_footprint");  
+        sprintf(odom_child_frame_id, "base_footprint");
 
         sprintf(imu_frame_id, "imu_link");
         sprintf(mag_frame_id, "mag_link");
@@ -430,16 +430,16 @@ void updateTFPrefix(bool isConnected)
       }
 
       sprintf(log_msg, "Setup TF on Odometry [%s]", odom_header_frame_id);
-      nh.loginfo(log_msg); 
+      nh.loginfo(log_msg);
 
       sprintf(log_msg, "Setup TF on IMU [%s]", imu_frame_id);
-      nh.loginfo(log_msg); 
+      nh.loginfo(log_msg);
 
       sprintf(log_msg, "Setup TF on MagneticField [%s]", mag_frame_id);
-      nh.loginfo(log_msg); 
+      nh.loginfo(log_msg);
 
       sprintf(log_msg, "Setup TF on JointState [%s]", joint_state_header_frame_id);
-      nh.loginfo(log_msg); 
+      nh.loginfo(log_msg);
 
       isChecked = true;
     }
@@ -468,7 +468,7 @@ void updateOdometry(void)
 }
 
 /*******************************************************************************
-* Update the joint states 
+* Update the joint states
 *******************************************************************************/
 void updateJointStates(void)
 {
@@ -506,7 +506,7 @@ void updateMotorInfo(int32_t left_tick, int32_t right_tick)
 {
   int32_t current_tick = 0;
   static int32_t last_tick[WHEEL_NUM] = {0, 0};
-  
+
   if (init_encoder)
   {
     for (int index = 0; index < WHEEL_NUM; index++)
@@ -516,7 +516,7 @@ void updateMotorInfo(int32_t left_tick, int32_t right_tick)
       last_rad[index]       = 0.0;
 
       last_velocity[index]  = 0.0;
-    }  
+    }
 
     last_tick[LEFT] = left_tick;
     last_tick[RIGHT] = right_tick;
@@ -570,9 +570,9 @@ bool calcOdometry(double diff_time)
     wheel_r = 0.0;
 
   delta_s     = WHEEL_RADIUS * (wheel_r + wheel_l) / 2.0;
-  // theta = WHEEL_RADIUS * (wheel_r - wheel_l) / WHEEL_SEPARATION;  
+  // theta = WHEEL_RADIUS * (wheel_r - wheel_l) / WHEEL_SEPARATION;
   orientation = sensors.getOrientation();
-  theta       = atan2f(orientation[1]*orientation[2] + orientation[0]*orientation[3], 
+  theta       = atan2f(orientation[1]*orientation[2] + orientation[0]*orientation[3],
                 0.5f - orientation[2]*orientation[2] - orientation[3]*orientation[3]);
 
   delta_theta = theta - last_theta;
@@ -611,7 +611,7 @@ void driveTest(uint8_t buttons)
 
 //  motor_driver.readEn/coder(current_tick[LEFT], current_tick[RIGHT]);
 
-  if (buttons & (1<<0))  
+  if (buttons & (1<<0))
   {
     move[LINEAR] = true;
     saved_tick[RIGHT] = current_tick[RIGHT];
@@ -629,7 +629,7 @@ void driveTest(uint8_t buttons)
   }
 
   if (move[LINEAR])
-  {    
+  {
     if (abs(saved_tick[RIGHT] - current_tick[RIGHT]) <= diff_encoder)
     {
       goal_velocity_from_button[LINEAR]  = 0.05;
@@ -642,7 +642,7 @@ void driveTest(uint8_t buttons)
     }
   }
   else if (move[ANGULAR])
-  {   
+  {
     if (abs(saved_tick[RIGHT] - current_tick[RIGHT]) <= diff_encoder)
     {
       goal_velocity_from_button[ANGULAR]= -0.7;
@@ -662,11 +662,11 @@ void driveTest(uint8_t buttons)
 void updateVariable(bool isConnected)
 {
   static bool variable_flag = false;
-  
+
   if (isConnected)
   {
     if (variable_flag == false)
-    {      
+    {
       sensors.initIMU();
       initOdom();
 
@@ -685,11 +685,11 @@ void updateVariable(bool isConnected)
 void waitForSerialLink(bool isConnected)
 {
   static bool wait_flag = false;
-  
+
   if (isConnected)
   {
     if (wait_flag == false)
-    {      
+    {
       delay(10);
 
       wait_flag = true;
@@ -768,18 +768,18 @@ void updateGyroCali(bool isConnected)
 void sendLogMsg(void)
 {
   static bool log_flag = false;
-  char log_msg[100];  
+  char log_msg[100];
 
   String name             = NAME;
   String firmware_version = FIRMWARE_VER;
   String bringup_log      = "This core(v" + firmware_version + ") is compatible with TB3 " + name;
-   
+
   const char* init_log_data = bringup_log.c_str();
 
   if (nh.connected())
   {
     if (log_flag == false)
-    {      
+    {
       sprintf(log_msg, "--------------------------");
       nh.loginfo(log_msg);
 
@@ -941,8 +941,8 @@ void initEncoders(){
   pinMode(LencoderPinB, INPUT_PULLUP);
   pinMode(RencoderPinA, INPUT_PULLUP);
   pinMode(RencoderPinB, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(LencoderPinA), encoderLeftISR,  CHANGE);  
-//  attachInterrupt(digitalPinToInterrupt(3), encoderLeftISR,  CHANGE);  
+  attachInterrupt(digitalPinToInterrupt(LencoderPinA), encoderLeftISR,  CHANGE);
+//  attachInterrupt(digitalPinToInterrupt(3), encoderLeftISR,  CHANGE);
   attachInterrupt(digitalPinToInterrupt(RencoderPinA), encoderRightISR, CHANGE);
 //  attachInterrupt(digitalPinToInterrupt(7), encoderRightISR, CHANGE);
 }
@@ -983,7 +983,7 @@ void resetEncoders() {
   resetEncoder(RIGHT);
 }
 
-void encoderread(){
+void updateEncoder(){
   if (Lfired)
   {
     if (Lup)
@@ -991,10 +991,10 @@ void encoderread(){
     else
       encoderLeft--;
     Lfired = false;
-    DEBUG_SERIAL.print("left: ");
-    DEBUG_SERIAL.print(encoderLeft);
-    DEBUG_SERIAL.print("; right: ");
-    DEBUG_SERIAL.println(encoderRight);
+//    DEBUG_SERIAL.print("left: ");
+//    DEBUG_SERIAL.print(encoderLeft);
+//    DEBUG_SERIAL.print("; right: ");
+//    DEBUG_SERIAL.println(encoderRight);
    }  // end if fired
   if (Rfired)
   {
@@ -1003,13 +1003,18 @@ void encoderread(){
     else
       encoderRight--;
     Rfired = false;
-    DEBUG_SERIAL.print("left: ");
-    DEBUG_SERIAL.print(encoderLeft);
-    DEBUG_SERIAL.print("; right: ");
-    DEBUG_SERIAL.println(encoderRight);
+//    DEBUG_SERIAL.print("left: ");
+//    DEBUG_SERIAL.print(encoderLeft);
+//    DEBUG_SERIAL.print("; right: ");
+//    DEBUG_SERIAL.println(encoderRight);
   }  // end if fired
 }
 
+bool readEncoder(int32_t &left_value, int32_t &right_value){
+  left_value = encoderLeft;
+  right_value = encoderRight;
+  return true;
+}
 /*******************************************************************************
 * control dex servo rotation
 *******************************************************************************/
@@ -1021,10 +1026,10 @@ void dexrotate(){
     if( (millis()-update_time[1]) > 1000 )
     {
       update_time[1] = millis();
-    
+
       tx_bandwidth = tx_data_cnt;
       rx_bandwidth = rx_data_cnt;
-    
+
       tx_data_cnt = 0;
       rx_data_cnt = 0;
     }
@@ -1056,22 +1061,22 @@ void sendDebuglog(void)
   DEBUG_SERIAL.print("    x : "); DEBUG_SERIAL.println(quat[1]);
   DEBUG_SERIAL.print("    y : "); DEBUG_SERIAL.println(quat[2]);
   DEBUG_SERIAL.print("    z : "); DEBUG_SERIAL.println(quat[3]);
-  
+
   DEBUG_SERIAL.println("---------------------------------------");
   DEBUG_SERIAL.println("DYNAMIXELS");
   DEBUG_SERIAL.println("---------------------------------------");
 //  DEBUG_SERIAL.println("Torque : " /+ String(motor_driver.getTorque()));
 
   int32_t encoder[WHEEL_NUM] = {0, 0};
-//  motor_driver.readEncoder(/encoder[LEFT], encoder[RIGHT]);
-  
+  readEncoder(encoder[LEFT], encoder[RIGHT]);
+
   DEBUG_SERIAL.println("Encoder(left) : " + String(encoder[LEFT]));
   DEBUG_SERIAL.println("Encoder(right) : " + String(encoder[RIGHT]));
 
   DEBUG_SERIAL.println("---------------------------------------");
   DEBUG_SERIAL.println("TurtleBot3");
   DEBUG_SERIAL.println("---------------------------------------");
-  DEBUG_SERIAL.println("Odometry : ");   
+  DEBUG_SERIAL.println("Odometry : ");
   DEBUG_SERIAL.print("         x : "); DEBUG_SERIAL.println(odom_pose[0]);
   DEBUG_SERIAL.print("         y : "); DEBUG_SERIAL.println(odom_pose[1]);
   DEBUG_SERIAL.print("     theta : "); DEBUG_SERIAL.println(odom_pose[2]);
