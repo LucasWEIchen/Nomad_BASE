@@ -54,8 +54,8 @@
 #define IMU_PUBLISH_FREQUENCY                  100  //hz
 #define CMD_VEL_PUBLISH_FREQUENCY              30   //hz
 #define DRIVE_INFORMATION_PUBLISH_FREQUENCY    30   //hz
-#define SERVO_CONTROL_FREQUENCY  1    //hz 
-#define DEBUG_LOG_FREQUENCY                    10   //hz 
+#define SERVO_CONTROL_FREQUENCY  1    //hz
+#define DEBUG_LOG_FREQUENCY                    10   //hz
 
 #define WHEEL_NUM                        2
 
@@ -73,7 +73,7 @@
 #define TEST_DISTANCE                    0.300     // meter
 #define TEST_RADIAN                      3.14      // 180 degree
 
-// #define DEBUG                            
+// #define DEBUG
 #define DEBUG_SERIAL                     SerialBT2
 
 
