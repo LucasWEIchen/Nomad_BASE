@@ -609,7 +609,7 @@ void driveTest(uint8_t buttons)
 
   int32_t current_tick[2] = {0, 0};
 
-//  motor_driver.readEn/coder(current_tick[LEFT], current_tick[RIGHT]);
+  readEncoder(current_tick[LEFT], current_tick[RIGHT]);
 
   if (buttons & (1<<0))
   {
@@ -993,10 +993,10 @@ void updateEncoder(){
     else
       encoderLeft--;
     Lfired = false;
-    DEBUG_SERIAL.print("left: ");
-    DEBUG_SERIAL.print(encoderLeft);
-    DEBUG_SERIAL.print("; right: ");
-    DEBUG_SERIAL.println(encoderRight);
+//    DEBUG_SERIAL.print("left: ");
+//    DEBUG_SERIAL.print(encoderLeft);
+//    DEBUG_SERIAL.print("; right: ");
+//    DEBUG_SERIAL.println(encoderRight);
    }  // end if fired
   if (Rfired)
   {
@@ -1005,14 +1005,12 @@ void updateEncoder(){
     else
       encoderRight--;
     Rfired = false;
-    DEBUG_SERIAL.print("left: ");
-    DEBUG_SERIAL.print(encoderLeft);
-    DEBUG_SERIAL.print("; right: ");
-    DEBUG_SERIAL.println(encoderRight);
+//    DEBUG_SERIAL.print("left: ");
+//    DEBUG_SERIAL.print(encoderLeft);
+//    DEBUG_SERIAL.print("; right: ");
+//    DEBUG_SERIAL.println(encoderRight);
   }  // end if fired
-  sprintf(log_msg, "Left Encoder Readings [%d]", encoderLeft);
-  nh.loginfo(log_msg);
-  sprintf(log_msg, "Left Encoder Readings [%d]", encoderRight);
+  sprintf(log_msg, "Left Encoder [%d], Right Encoder [%d]", encoderLeft, encoderRight);
   nh.loginfo(log_msg);
 }
 
