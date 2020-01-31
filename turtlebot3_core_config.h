@@ -74,13 +74,13 @@
 #define TEST_RADIAN                      3.14      // 180 degree
 
 // #define DEBUG
-#define DEBUG_SERIAL                     SerialBT2
+//#define DEBUG_SERIAL                     Serial4 /
 
 
 #define DXL_USB_VER           20170915
 
 #define CMD_PORT              Serial      // USB
-#define DBG_PORT              Serial2     // UART1
+#define DEBUG_SERIAL          Serial2      // UART1
 #define DXL_PORT              Serial3
 #define DXL_BAUD              1000000
 

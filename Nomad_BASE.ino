@@ -22,7 +22,7 @@
 *******************************************************************************/
 void setup()
 {
-  DEBUG_SERIAL.begin(57600);
+  DEBUG_SERIAL.begin(9600);
   // Initialize ROS node handle, advertise and subscribe the topics
   nh.initNode();
   nh.getHardware()->setBaud(115200);
@@ -984,6 +984,8 @@ void resetEncoders() {
 }
 
 void updateEncoder(){
+  char log_msg[50];
+
   if (Lfired)
   {
     if (Lup)
@@ -991,10 +993,10 @@ void updateEncoder(){
     else
       encoderLeft--;
     Lfired = false;
-//    DEBUG_SERIAL.print("left: ");
-//    DEBUG_SERIAL.print(encoderLeft);
-//    DEBUG_SERIAL.print("; right: ");
-//    DEBUG_SERIAL.println(encoderRight);
+    DEBUG_SERIAL.print("left: ");
+    DEBUG_SERIAL.print(encoderLeft);
+    DEBUG_SERIAL.print("; right: ");
+    DEBUG_SERIAL.println(encoderRight);
    }  // end if fired
   if (Rfired)
   {
@@ -1003,11 +1005,15 @@ void updateEncoder(){
     else
       encoderRight--;
     Rfired = false;
-//    DEBUG_SERIAL.print("left: ");
-//    DEBUG_SERIAL.print(encoderLeft);
-//    DEBUG_SERIAL.print("; right: ");
-//    DEBUG_SERIAL.println(encoderRight);
+    DEBUG_SERIAL.print("left: ");
+    DEBUG_SERIAL.print(encoderLeft);
+    DEBUG_SERIAL.print("; right: ");
+    DEBUG_SERIAL.println(encoderRight);
   }  // end if fired
+  sprintf(log_msg, "Left Encoder Readings [%d]", encoderLeft);
+  nh.loginfo(log_msg);
+  sprintf(log_msg, "Left Encoder Readings [%d]", encoderRight);
+  nh.loginfo(log_msg);
 }
 
 bool readEncoder(int32_t &left_value, int32_t &right_value){
