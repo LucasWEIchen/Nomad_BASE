@@ -29,7 +29,8 @@ void setup()
 
   nh.subscribe(cmd_vel_sub);
   nh.subscribe(sound_sub);
-//  nh.subscribe(motor_power_sub);
+  nh.subscribe(joint_position_sub);
+  nh.subscribe(joint_move_time_sub);
   nh.subscribe(reset_sub);
 
   nh.advertise(sensor_state_pub);
@@ -43,8 +44,9 @@ void setup()
   tf_broadcaster.init(nh);
 
   // Setting for Dynamixel motors
-//  motor_driver.init(NAME);/
+  DynamixelWorkbench dxl_wb_;
 
+  LiDAR_driver.init(&joint_id[0], joint_cnt);
   // Setting for IMU
   sensors.init();
 
@@ -75,23 +77,8 @@ void setup()
   pinMode(R_BACK, OUTPUT);
   stop();
 /*******************************************************************************
-* servo
+* DC motor
 *******************************************************************************/
-
-  CMD_PORT.begin(38400);
-  DXL_PORT.begin(DXL_BAUD);
-
-  pinMode( BDPIN_DXL_PWR_EN, OUTPUT );
-  pinMode( DXL_LED_RX, OUTPUT );
-  pinMode( DXL_LED_TX, OUTPUT );
-
-  digitalWrite(DXL_LED_TX, HIGH);
-  digitalWrite(DXL_LED_RX, HIGH);
-
-  drv_dxl_tx_enable(FALSE);
-
-  DXL_POWER_ENABLE();
-
   initEncoders();
   resetEncoders();
 
@@ -106,9 +93,6 @@ void loop()
   updateTime();
   updateVariable(nh.connected());
   updateTFPrefix(nh.connected());
-  update_dxl();
-  update_led();
-
 
   if ((t-tTime[0]) >= (1000 / CONTROL_MOTOR_SPEED_FREQUENCY))
   {
@@ -146,9 +130,9 @@ void loop()
     tTime[3] = t;
   }
 
-  if ((t-tTime[4]) >= (1000 / SERVO_CONTROL_FREQUENCY))
+  if ((t-tTime[4]) >= (1000 / JOINT_CONTROL_FREQEUNCY))
   {
-    dexrotate();
+    jointControl();
     tTime[4] = t;
   }
 
@@ -853,84 +837,24 @@ void updateGoalVelocity(void)
 
   sensors.setLedPattern(goal_velocity[LINEAR], goal_velocity[ANGULAR]);
 }
-
 /*******************************************************************************
-* Servo function
+* Callback function for joint trajectory msg
 *******************************************************************************/
-void update_dxl()
+void jointTrajectoryPointCallback(const std_msgs::Float64MultiArray& joint_trajectory_point_msg)
 {
-  int length;
-  int i;
-
-
-  //-- USB -> DXL
-  length = CMD_PORT.available();
-  if( length > 0 )
+  if (is_moving == false)
   {
-    drv_dxl_tx_enable(TRUE);
-    for(i=0; i<length; i++ )
-    {
-      DXL_PORT.write(CMD_PORT.read());
-      DXL_PORT.flush();
-    }
-    drv_dxl_tx_enable(FALSE);
-
-    tx_led_count = 3;
-
-    tx_data_cnt += length;
-  }
-
-  //-- DXL -> USB
-  length = DXL_PORT.available();
-  if( length > 0 )
-  {
-    if( length > DXL_TX_BUFFER_LENGTH )
-    {
-      length = DXL_TX_BUFFER_LENGTH;
-    }
-    for(i=0; i<length; i++ )
-    {
-      tx_buffer[i] = DXL_PORT.read();
-    }
-    CMD_PORT.write(tx_buffer, length);
-
-    rx_led_count = 3;
-    rx_data_cnt += length;
+    joint_trajectory_point = joint_trajectory_point_msg;
+    is_moving = true;
   }
 }
-
-
-void update_led()
+/*******************************************************************************
+* Callback function for joint move time msg
+*******************************************************************************/
+void jointMoveTimeCallback(const std_msgs::Float64& time_msg)
 {
-  if( (millis()-tx_led_update_time) > 50 )
-  {
-    tx_led_update_time = millis();
-
-    if( tx_led_count )
-    {
-      digitalWrite(DXL_LED_TX, !digitalRead(DXL_LED_TX));
-      tx_led_count--;
-    }
-    else
-    {
-      digitalWrite(DXL_LED_TX, HIGH);
-    }
-  }
-
-  if( (millis()-rx_led_update_time) > 50 )
-  {
-    rx_led_update_time = millis();
-
-    if( rx_led_count )
-    {
-      digitalWrite(DXL_LED_RX, !digitalRead(DXL_LED_RX));
-      rx_led_count--;
-    }
-    else
-    {
-      digitalWrite(DXL_LED_RX, HIGH);
-    }
-  }
+  double data = time_msg.data;
+  LiDAR_driver.writeJointProfileControlParam(data);
 }
 /*******************************************************************************
 * Encoders function
@@ -1020,25 +944,69 @@ bool readEncoder(int32_t &left_value, int32_t &right_value){
   return true;
 }
 /*******************************************************************************
-* control dex servo rotation
+* Manipulator's joint control
 *******************************************************************************/
-void dexrotate(){
-    if( CMD_PORT.getBaudRate() != DXL_PORT.getBaudRate() )
-    {
-      DXL_PORT.begin(CMD_PORT.getBaudRate());
-    }
-    if( (millis()-update_time[1]) > 1000 )
-    {
-      update_time[1] = millis();
+void jointControl(void)
+{
+  const uint8_t POINT_SIZE = joint_cnt + 1; // Add time parameter
+  const double JOINT_CONTROL_PERIOD = 1.0f / (double)JOINT_CONTROL_FREQEUNCY;
+  static uint32_t points = 0;
 
-      tx_bandwidth = tx_data_cnt;
-      rx_bandwidth = rx_data_cnt;
+  static uint8_t wait_for_write = 0;
+  static uint8_t loop_cnt = 0;
 
-      tx_data_cnt = 0;
-      rx_data_cnt = 0;
+  if (is_moving == true)
+  {
+    uint32_t all_points_cnt = joint_trajectory_point.data_length;
+    uint8_t write_cnt = 0;
+
+    if (loop_cnt < (wait_for_write))
+    {
+      loop_cnt++;
+      return;
     }
+    else
+    {
+      double goal_joint_position[joint_cnt];
+      double move_time = 0.0f;
+
+      if (points == 0) move_time = joint_trajectory_point.data[points + POINT_SIZE] - joint_trajectory_point.data[points];
+      else if ((points + POINT_SIZE) >= all_points_cnt) move_time = joint_trajectory_point.data[points] / 2.0f;
+      else  move_time = joint_trajectory_point.data[points] - joint_trajectory_point.data[points - POINT_SIZE];
+
+      for (uint32_t positions = points + 1; positions < (points + POINT_SIZE); positions++)
+      {        
+        if ((points + POINT_SIZE) >= all_points_cnt)
+        {
+          goal_joint_position[write_cnt] = joint_trajectory_point.data[positions];
+        }
+        else
+        {
+          double offset = 2.0f * (joint_trajectory_point.data[positions + POINT_SIZE] - joint_trajectory_point.data[positions]);
+          goal_joint_position[write_cnt] = joint_trajectory_point.data[positions] + offset;
+        }
+        write_cnt++;
+      }
+
+      LiDAR_driver.writeJointProfileControlParam(move_time * 2.0f);
+      LiDAR_driver.writeJointPosition(goal_joint_position);
+
+      wait_for_write = move_time / JOINT_CONTROL_PERIOD;
+      points = points + POINT_SIZE;
+
+      if (points >= all_points_cnt)
+      {
+        points = 0;
+        wait_for_write = 0;
+        is_moving = false;
+      }
+      else
+      {
+        loop_cnt = 0;
+      }
+    }
+  }
 }
-
 /*******************************************************************************
 * Send Debug data
 *******************************************************************************/

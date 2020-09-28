@@ -24,6 +24,8 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int32.h>
+#include <std_msgs/Float64.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/BatteryState.h>
@@ -41,7 +43,8 @@
 #include <TurtleBot3.h>
 #include "turtlebot3_waffle.h"
 
-#include <DynamixelSDK.h>
+#include "lidar_joint.h"
+
 #include <stdarg.h>
 
 #include <math.h>
@@ -54,7 +57,7 @@
 #define IMU_PUBLISH_FREQUENCY                  100  //hz
 #define CMD_VEL_PUBLISH_FREQUENCY              30   //hz
 #define DRIVE_INFORMATION_PUBLISH_FREQUENCY    30   //hz
-#define SERVO_CONTROL_FREQUENCY  1    //hz
+#define JOINT_CONTROL_FREQEUNCY                10    //hz
 #define DEBUG_LOG_FREQUENCY                    10   //hz
 
 #define WHEEL_NUM                        2
@@ -160,6 +163,8 @@ void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg);
 void soundCallback(const turtlebot3_msgs::Sound& sound_msg);
 //void motorPowerCallback(const std_msgs::Bool& power_msg);/
 void resetCallback(const std_msgs::Empty& reset_msg);
+void jointTrajectoryPointCallback(const std_msgs::Float64MultiArray& joint_trajectory_point_msg);
+void jointMoveTimeCallback(const std_msgs::Float64& time_msg);
 
 // Function prototypes
 void publishCmdVelFromRC100Msg(void);
@@ -223,6 +228,10 @@ ros::Subscriber<turtlebot3_msgs::Sound> sound_sub("sound", soundCallback);
 
 ros::Subscriber<std_msgs::Empty> reset_sub("reset", resetCallback);
 
+ros::Subscriber<std_msgs::Float64MultiArray> joint_position_sub("joint_trajectory_point", jointTrajectoryPointCallback);
+
+ros::Subscriber<std_msgs::Float64> joint_move_time_sub("joint_move_time", jointMoveTimeCallback);
+
 /*******************************************************************************
 * Publisher
 *******************************************************************************/
@@ -273,7 +282,7 @@ static uint32_t tTime[10];
 /*******************************************************************************
 * Declaration for motor
 *******************************************************************************/
-Turtlebot3MotorDriver motor_driver;
+//Turtlebot3MotorDriver motor_driver;
 
 /*******************************************************************************
 * Calculation for odometry
@@ -318,4 +327,16 @@ double odom_vel[3];
 bool setup_end        = false;
 uint8_t battery_state = 0;
 
+/*******************************************************************************
+* Joint Control
+*******************************************************************************/
+bool is_moving        = false;
+std_msgs::Float64MultiArray joint_trajectory_point;
+
+/*******************************************************************************
+* Declaration for LiDAR Joint
+*******************************************************************************/
+uint8_t joint_id[JOINT_CNT] = {JOINT_ID_1};
+uint8_t joint_cnt = JOINT_CNT;
+LiDAR_joint_Driver LiDAR_driver;
 #endif // TURTLEBOT3_CORE_CONFIG_H_
