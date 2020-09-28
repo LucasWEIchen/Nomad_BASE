@@ -507,7 +507,7 @@ void updateOdometry(void)
 }
 
 /*******************************************************************************
-* Update the joint states
+* Update the wheel states
 *******************************************************************************/
 void updateJointStates(void)
 {

@@ -73,8 +73,7 @@ void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg);
 void soundCallback(const turtlebot3_msgs::Sound& sound_msg);
 //void motorPowerCallback(const std_msgs::Bool& power_msg);/
 void resetCallback(const std_msgs::Empty& reset_msg);
-void jointTrajectoryPointCallback(const std_msgs::Int32& joint_trajectory_point_msg);
-//void jointMoveTimeCallback(const std_msgs::Float64& time_msg);
+
 
 // Function prototypes
 void publishCmdVelFromRC100Msg(void);
@@ -138,9 +137,9 @@ ros::Subscriber<turtlebot3_msgs::Sound> sound_sub("sound", soundCallback);
 
 ros::Subscriber<std_msgs::Empty> reset_sub("reset", resetCallback);
 
-ros::Subscriber<std_msgs::Int32> joint_position_sub("joint_trajectory_point", jointTrajectoryPointCallback);
 
-//ros::Subscriber<std_msgs::Float64> joint_move_time_sub("joint_move_time", jointMoveTimeCallback);
+
+
 
 /*******************************************************************************
 * Publisher
