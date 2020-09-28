@@ -29,8 +29,7 @@ void setup()
 
   nh.subscribe(cmd_vel_sub);
   nh.subscribe(sound_sub);
-  nh.subscribe(joint_position_sub);
-  nh.subscribe(joint_move_time_sub);
+//  nh.subscribe(motor_power_sub);
   nh.subscribe(reset_sub);
 
   nh.advertise(sensor_state_pub);
@@ -44,9 +43,8 @@ void setup()
   tf_broadcaster.init(nh);
 
   // Setting for Dynamixel motors
-  DynamixelWorkbench dxl_wb_;
+//  motor_driver.init(NAME);/
 
-  LiDAR_driver.init(&joint_id[0], joint_cnt);
   // Setting for IMU
   sensors.init();
 
@@ -77,7 +75,53 @@ void setup()
   pinMode(R_BACK, OUTPUT);
   stop();
 /*******************************************************************************
-* DC motor
+* dex servo init
+*******************************************************************************/
+ 
+  bool result = false;
+  const char *log;
+  uint16_t model_number = 0;
+
+  result = dxl_wb.init(DEVICE_NAME, BAUDRATE, &log);
+  if (result == false)
+  {
+    Serial.println(log);
+    Serial.println("Failed to init");
+  }
+  else
+  {
+    Serial.print("Succeeded to init : ");
+    Serial.println(BAUDRATE);  
+  }
+
+  result = dxl_wb.ping(DXL_ID, &model_number, &log);
+  if (result == false)
+  {
+    Serial.println(log);
+    Serial.println("Failed to ping");
+  }
+  else
+  {
+    Serial.println("Succeeded to ping");
+    Serial.print("id : ");
+    Serial.print(DXL_ID);
+    Serial.print(" model_number : ");
+    Serial.println(model_number);
+  }
+
+  result = dxl_wb.jointMode(DXL_ID, 0, 0, &log);
+  if (result == false)
+  {
+    Serial.println(log);
+    Serial.println("Failed to change joint mode");
+  }
+  else
+  {
+    Serial.println("Succeed to change joint mode");
+    dxl_wb.led(DXL_ID, true, &log);
+  }
+/*******************************************************************************
+* encoder
 *******************************************************************************/
   initEncoders();
   resetEncoders();
@@ -93,6 +137,7 @@ void loop()
   updateTime();
   updateVariable(nh.connected());
   updateTFPrefix(nh.connected());
+
 
   if ((t-tTime[0]) >= (1000 / CONTROL_MOTOR_SPEED_FREQUENCY))
   {
@@ -185,6 +230,16 @@ void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg)
   goal_velocity_from_cmd[ANGULAR] = constrain(goal_velocity_from_cmd[ANGULAR], MIN_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
   tTime[6] = millis();
 
+}
+
+void jointTrajectoryPointCallback(const std_msgs::Int32& joint_pointing_msg)
+{
+  if (is_moving == false)
+  {
+    joint_trajectory_point = joint_pointing_msg;
+    dxl_wb.goalPosition(DXL_ID, (int32_t)1023);
+    is_moving = true;
+  }
 }
 
 void l298_motor_driver()
@@ -837,25 +892,8 @@ void updateGoalVelocity(void)
 
   sensors.setLedPattern(goal_velocity[LINEAR], goal_velocity[ANGULAR]);
 }
-/*******************************************************************************
-* Callback function for joint trajectory msg
-*******************************************************************************/
-void jointTrajectoryPointCallback(const std_msgs::Float64MultiArray& joint_trajectory_point_msg)
-{
-  if (is_moving == false)
-  {
-    joint_trajectory_point = joint_trajectory_point_msg;
-    is_moving = true;
-  }
-}
-/*******************************************************************************
-* Callback function for joint move time msg
-*******************************************************************************/
-void jointMoveTimeCallback(const std_msgs::Float64& time_msg)
-{
-  double data = time_msg.data;
-  LiDAR_driver.writeJointProfileControlParam(data);
-}
+
+
 /*******************************************************************************
 * Encoders function
 *******************************************************************************/
@@ -944,69 +982,14 @@ bool readEncoder(int32_t &left_value, int32_t &right_value){
   return true;
 }
 /*******************************************************************************
-* Manipulator's joint control
+* LiDAR dex servo rotation
 *******************************************************************************/
 void jointControl(void)
 {
-  const uint8_t POINT_SIZE = joint_cnt + 1; // Add time parameter
-  const double JOINT_CONTROL_PERIOD = 1.0f / (double)JOINT_CONTROL_FREQEUNCY;
-  static uint32_t points = 0;
-
-  static uint8_t wait_for_write = 0;
-  static uint8_t loop_cnt = 0;
-
-  if (is_moving == true)
-  {
-    uint32_t all_points_cnt = joint_trajectory_point.data_length;
-    uint8_t write_cnt = 0;
-
-    if (loop_cnt < (wait_for_write))
-    {
-      loop_cnt++;
-      return;
-    }
-    else
-    {
-      double goal_joint_position[joint_cnt];
-      double move_time = 0.0f;
-
-      if (points == 0) move_time = joint_trajectory_point.data[points + POINT_SIZE] - joint_trajectory_point.data[points];
-      else if ((points + POINT_SIZE) >= all_points_cnt) move_time = joint_trajectory_point.data[points] / 2.0f;
-      else  move_time = joint_trajectory_point.data[points] - joint_trajectory_point.data[points - POINT_SIZE];
-
-      for (uint32_t positions = points + 1; positions < (points + POINT_SIZE); positions++)
-      {        
-        if ((points + POINT_SIZE) >= all_points_cnt)
-        {
-          goal_joint_position[write_cnt] = joint_trajectory_point.data[positions];
-        }
-        else
-        {
-          double offset = 2.0f * (joint_trajectory_point.data[positions + POINT_SIZE] - joint_trajectory_point.data[positions]);
-          goal_joint_position[write_cnt] = joint_trajectory_point.data[positions] + offset;
-        }
-        write_cnt++;
-      }
-
-      LiDAR_driver.writeJointProfileControlParam(move_time * 2.0f);
-      LiDAR_driver.writeJointPosition(goal_joint_position);
-
-      wait_for_write = move_time / JOINT_CONTROL_PERIOD;
-      points = points + POINT_SIZE;
-
-      if (points >= all_points_cnt)
-      {
-        points = 0;
-        wait_for_write = 0;
-        is_moving = false;
-      }
-      else
-      {
-        loop_cnt = 0;
-      }
-    }
-  }
+    const char *log;
+    dxl_wb.torque(DXL_ID, true, &log);
 }
+
 /*******************************************************************************
 * Send Debug data
 *******************************************************************************/

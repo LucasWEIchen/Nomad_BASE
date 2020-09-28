@@ -25,7 +25,7 @@
 #include <std_msgs/Empty.h>
 #include <std_msgs/Int32.h>
 #include <std_msgs/Float64.h>
-#include <std_msgs/Float64MultiArray.h>
+
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/BatteryState.h>
@@ -45,13 +45,14 @@
 
 #include "lidar_joint.h"
 
+
 #include <stdarg.h>
 
 #include <math.h>
 
 #define FIRMWARE_VER "1.2.3"
 
-#define CONTROL_MOTOR_SPEED_FREQUENCY          500   //hz
+#define CONTROL_MOTOR_SPEED_FREQUENCY          30   //hz
 #define ENCODER_SAMPLE_FREQUENCY               100   //hz
 #define CONTROL_MOTOR_TIMEOUT                  500  //ms
 #define IMU_PUBLISH_FREQUENCY                  100  //hz
@@ -60,111 +61,20 @@
 #define JOINT_CONTROL_FREQEUNCY                10    //hz
 #define DEBUG_LOG_FREQUENCY                    10   //hz
 
-#define WHEEL_NUM                        2
-
-#define LEFT                             0
-#define RIGHT                            1
-
-#define LINEAR                           0
-#define ANGULAR                          1
-
-#define DEG2RAD(x)                       (x * 0.01745329252)  // *PI/180
-#define RAD2DEG(x)                       (x * 57.2957795131)  // *180/PI
-
-#define TICK2RAD                         0.001533981  // 0.087890625[deg] * 3.14159265359 / 180 = 0.001533981f
-
-#define TEST_DISTANCE                    0.300     // meter
-#define TEST_RADIAN                      3.14      // 180 degree
-
 // #define DEBUG
 //#define DEBUG_SERIAL                     Serial4 /
 
 
-#define DXL_USB_VER           20170915
-
-#define CMD_PORT              Serial      // USB
-#define DEBUG_SERIAL          Serial2      // UART1
-#define DXL_PORT              Serial3
-#define DXL_BAUD              1000000
-
-
-#define DXL_LED_RX            BDPIN_LED_USER_1
-#define DXL_LED_TX            BDPIN_LED_USER_2
-
-
-#define DXL_POWER_DISABLE()   digitalWrite(BDPIN_DXL_PWR_EN, LOW);
-#define DXL_POWER_ENABLE()    digitalWrite(BDPIN_DXL_PWR_EN, HIGH);
-
-#define DXL_TX_BUFFER_LENGTH  1024
-
-#define LEFT            0
-#define RIGHT           1
-#define FORWARDS true
-#define BACKWARDS false
-
-#define PWM_MIN 110
-#define PWMRANGE 255
-
-// add in the next 3 lines to fix min max bug
-#undef min
-inline int min(int a, int b) { return ((a)<(b) ? (a) : (b)); }
-inline double min(double a, double b) { return ((a)<(b) ? (a) : (b)); }
-
-#undef max
-inline int max(int a, int b) { return ((a)>(b) ? (a) : (b)); }
-inline double max(double a, double b) { return ((a)>(b) ? (a) : (b)); }
-
-
-uint16_t lPwm;
-uint16_t rPwm;
-float l;
-float r;
-
-const uint8_t L_PWM = 9;
-const uint8_t L_BACK = 4;
-const uint8_t L_FORW = 5;
-const uint8_t R_BACK = 6;
-const uint8_t R_FORW = 7;
-const uint8_t R_PWM = 10;
-
-uint8_t tx_buffer[DXL_TX_BUFFER_LENGTH];
-
-
-static int rx_led_count = 0;
-static int tx_led_count = 0;
-
-static int rx_led_update_time;
-static int tx_led_update_time;
-
-static uint32_t update_time[8];
-
-
-static uint32_t rx_data_cnt = 0;
-static uint32_t tx_data_cnt = 0;
-
-static uint32_t rx_bandwidth = 0;
-static uint32_t tx_bandwidth = 0;
-
-uint32_t usb_baud;
-
-volatile long encoderLeft = 0L;
-volatile long encoderRight = 0L;
-const byte LencoderPinA = 2;
-const byte LencoderPinB = 14;
-const byte RencoderPinA = 3;
-const byte RencoderPinB = 15;
-volatile bool Lfired;
-volatile bool Lup;
-volatile bool Rfired;
-volatile bool Rup;
+/*******************************************************************************
+*******************************************************************************/
 
 // Callback function prototypes
 void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg);
 void soundCallback(const turtlebot3_msgs::Sound& sound_msg);
 //void motorPowerCallback(const std_msgs::Bool& power_msg);/
 void resetCallback(const std_msgs::Empty& reset_msg);
-void jointTrajectoryPointCallback(const std_msgs::Float64MultiArray& joint_trajectory_point_msg);
-void jointMoveTimeCallback(const std_msgs::Float64& time_msg);
+void jointTrajectoryPointCallback(const std_msgs::Int32& joint_trajectory_point_msg);
+//void jointMoveTimeCallback(const std_msgs::Float64& time_msg);
 
 // Function prototypes
 void publishCmdVelFromRC100Msg(void);
@@ -228,9 +138,9 @@ ros::Subscriber<turtlebot3_msgs::Sound> sound_sub("sound", soundCallback);
 
 ros::Subscriber<std_msgs::Empty> reset_sub("reset", resetCallback);
 
-ros::Subscriber<std_msgs::Float64MultiArray> joint_position_sub("joint_trajectory_point", jointTrajectoryPointCallback);
+ros::Subscriber<std_msgs::Int32> joint_position_sub("joint_trajectory_point", jointTrajectoryPointCallback);
 
-ros::Subscriber<std_msgs::Float64> joint_move_time_sub("joint_move_time", jointMoveTimeCallback);
+//ros::Subscriber<std_msgs::Float64> joint_move_time_sub("joint_move_time", jointMoveTimeCallback);
 
 /*******************************************************************************
 * Publisher
@@ -327,16 +237,5 @@ double odom_vel[3];
 bool setup_end        = false;
 uint8_t battery_state = 0;
 
-/*******************************************************************************
-* Joint Control
-*******************************************************************************/
-bool is_moving        = false;
-std_msgs::Float64MultiArray joint_trajectory_point;
-
-/*******************************************************************************
-* Declaration for LiDAR Joint
-*******************************************************************************/
-uint8_t joint_id[JOINT_CNT] = {JOINT_ID_1};
-uint8_t joint_cnt = JOINT_CNT;
-LiDAR_joint_Driver LiDAR_driver;
+//LiDAR_joint_Driver LiDAR_driver;
 #endif // TURTLEBOT3_CORE_CONFIG_H_
