@@ -29,7 +29,7 @@ void setup()
 
   nh.subscribe(cmd_vel_sub);
   nh.subscribe(sound_sub);
-//  nh.subscribe(motor_power_sub);
+  nh.subscribe(joint_position_sub);
   nh.subscribe(reset_sub);
 
   nh.advertise(sensor_state_pub);
@@ -234,12 +234,13 @@ void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg)
 
 void jointTrajectoryPointCallback(const std_msgs::Int32& joint_pointing_msg)
 {
-  if (is_moving == false)
-  {
-    joint_trajectory_point = joint_pointing_msg;
-    dxl_wb.goalPosition(DXL_ID, (int32_t)1023);
-    is_moving = true;
-  }
+//  if (is_moving == false)
+//  {
+    const char *log;
+    joint_trajectory_point = joint_pointing_msg.data;
+    dxl_wb.goalPosition(DXL_ID, (int32_t)joint_trajectory_point, &log);
+//    is_moving = true;
+//  }
 }
 
 void l298_motor_driver()
@@ -982,12 +983,15 @@ bool readEncoder(int32_t &left_value, int32_t &right_value){
   return true;
 }
 /*******************************************************************************
-* LiDAR dex servo rotation
+* LiDAR dex servo rotation  -----------tobe done
 *******************************************************************************/
 void jointControl(void)
 {
-    const char *log;
-    dxl_wb.torque(DXL_ID, true, &log);
+//    const char *log;
+//    
+//    dxl_wb.goalPosition(DXL_ID, (int32_t)joint_trajectory_point, &log);
+//    is_moving = false;
+//    dxl_wb.torque(DXL_ID, true, &log);
 }
 
 /*******************************************************************************

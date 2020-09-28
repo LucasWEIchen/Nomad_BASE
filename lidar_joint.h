@@ -48,7 +48,7 @@ ros::Subscriber<std_msgs::Int32> joint_position_sub("joint_trajectory_point", jo
 DynamixelWorkbench dxl_wb;
 
 bool is_moving        = false;
-std_msgs::Int32 joint_trajectory_point;
+int joint_trajectory_point;
 uint8_t DXL_ID = 1;
 
 /*******************************************************************************
