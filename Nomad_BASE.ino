@@ -987,11 +987,7 @@ bool readEncoder(int32_t &left_value, int32_t &right_value){
 *******************************************************************************/
 void jointControl(void)
 {
-//    const char *log;
-//    
-//    dxl_wb.goalPosition(DXL_ID, (int32_t)joint_trajectory_point, &log);
-//    is_moving = false;
-//    dxl_wb.torque(DXL_ID, true, &log);
+  dxl_wb.goalPosition(DXL_ID, (int32_t)2048, &log);
 }
 
 /*******************************************************************************
