@@ -987,7 +987,7 @@ bool readEncoder(int32_t &left_value, int32_t &right_value){
 *******************************************************************************/
 void jointControl(void)
 {
-  dxl_wb.goalPosition(DXL_ID, (int32_t)2048, &log);
+  dxl_wb.goalPosition(DXL_ID, (int32_t)2048);
 }
 
 /*******************************************************************************
