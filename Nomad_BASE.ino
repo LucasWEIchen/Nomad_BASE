@@ -143,7 +143,7 @@ void loop()
   {
     updateGoalVelocity();
 
-    if ((t-tTime[6]) > CONTROL_MOTOR_TIMEOUT)
+    if ((t-tTime[5]) > CONTROL_MOTOR_TIMEOUT)
     {
 //      l298_motor_driver();/
 //      stop();/
@@ -175,17 +175,17 @@ void loop()
     tTime[3] = t;
   }
 
-  if ((t-tTime[4]) >= (1000 / JOINT_CONTROL_FREQEUNCY))
-  {
-    jointControl();
-    tTime[4] = t;
-  }
+//  if ((t-tTime[4]) >= (1000 / JOINT_CONTROL_FREQEUNCY))
+//  {
+//    jointControl();
+//    tTime[4] = t;
+//  }
 
 #ifdef DEBUG
-  if ((t-tTime[5]) >= (1000 / DEBUG_LOG_FREQUENCY))
+  if ((t-tTime[4]) >= (1000 / DEBUG_LOG_FREQUENCY))
   {
     sendDebuglog();
-    tTime[5] = t;
+    tTime[4] = t;
   }
 #endif
 
@@ -973,7 +973,7 @@ void updateEncoder(){
 //    DEBUG_SERIAL.print("; right: ");
 //    DEBUG_SERIAL.println(encoderRight);
   }  // end if fired
-  sprintf(log_msg, "Left Encoder [%d], Right Encoder [%d]", encoderLeft, encoderRight);
+  //sprintf(log_msg, "Left Encoder [%d], Right Encoder [%d]", encoderLeft, encoderRight);
   nh.loginfo(log_msg);
 }
 
