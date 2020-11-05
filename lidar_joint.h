@@ -43,7 +43,7 @@
 *******************************************************************************/
 
 void jointTrajectoryPointCallback(const std_msgs::Int32& joint_trajectory_point_msg);
-ros::Subscriber<std_msgs::Int32> joint_position_sub("joint_trajectory_point", jointTrajectoryPointCallback);
+ros::Subscriber<std_msgs::Int32> joint_position_sub("livox_joint", jointTrajectoryPointCallback);
 
 DynamixelWorkbench dxl_wb;
 
